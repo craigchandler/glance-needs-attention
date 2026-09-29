@@ -1,0 +1,81 @@
+{
+  "title": "Needs Attention",
+  "listenAddr": "127.0.0.1:8795",
+  "refreshInterval": "1m",
+  "httpTimeout": "5s",
+  "sources": [
+    {
+      "name": "Backups",
+      "type": "backup-status",
+      "url": "http://127.0.0.1:8792/status",
+      "settings": {
+        "friendlySources": {
+          "webapps-backup": "Web Applications"
+        },
+        "failedSeverity": "critical",
+        "warningSeverity": "warning",
+        "staleSeverity": "warning"
+      }
+    },
+    {
+      "name": "GitHub",
+      "type": "github-status",
+      "url": "http://127.0.0.1:8794/status",
+      "settings": {
+        "includeSecurityAlerts": true,
+        "includeFailedRuns": true,
+        "includeReviewRequests": true,
+        "includeAssignedIssues": true,
+        "securitySeverity": "critical",
+        "failedRunSeverity": "critical",
+        "reviewSeverity": "info",
+        "assignedIssueSeverity": "info"
+      }
+    },
+    {
+      "name": "QNAP",
+      "type": "qnap-status",
+      "url": "http://127.0.0.1:8787/status",
+      "settings": {
+        "volumeWarnPercent": 85,
+        "healthyVolumeStatuses": [
+          "ready",
+          "good"
+        ],
+        "healthyDiskStatuses": [
+          "good",
+          "ok",
+          "normal"
+        ],
+        "usageSeverity": "warning",
+        "healthSeverity": "critical"
+      }
+    },
+    {
+      "name": "Azure Cost",
+      "type": "azure-cost",
+      "url": "http://127.0.0.1:8789/status",
+      "settings": {
+        "monthToDateWarn": 0,
+        "severity": "warning",
+        "defaultCurrency": "USD"
+      }
+    },
+    {
+      "name": "Certificates",
+      "type": "generic-json",
+      "url": "http://127.0.0.1:8796/status",
+      "settings": {
+        "rules": [
+          {
+            "forEach": "attention",
+            "path": "status",
+            "op": "truthy",
+            "severityPath": "status",
+            "message": "{{name}}: {{message}}"
+          }
+        ]
+      }
+    }
+  ]
+}

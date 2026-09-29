@@ -1,0 +1,4 @@
+- type: extension
+  url: http://127.0.0.1:8795/widget
+  cache: 1m
+  allow-potentially-dangerous-html: true

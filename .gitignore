@@ -1,0 +1,13 @@
+/needs-attention
+/dist/
+*.test
+coverage.out
+.env
+/config.json
+*.swp
+*~
+.DS_Store
+/.idea/
+/.vscode/
+/.agents/
+/.codex/

@@ -1,0 +1,31 @@
+{
+  "title": "Needs Attention",
+  "listenAddr": "127.0.0.1:8795",
+  "refreshInterval": "1m",
+  "httpTimeout": "5s",
+  "sources": [
+    {
+      "name": "Example Service",
+      "type": "generic-json",
+      "url": "http://127.0.0.1:8800/status",
+      "settings": {
+        "rules": [
+          {
+            "path": "ok",
+            "op": "eq",
+            "value": false,
+            "severity": "critical",
+            "message": "Service reports unhealthy"
+          },
+          {
+            "path": "disk.usedPercent",
+            "op": "gte",
+            "value": 90,
+            "severity": "warning",
+            "message": "Disk usage is {{value}}%"
+          }
+        ]
+      }
+    }
+  ]
+}
