@@ -15,6 +15,8 @@ import (
 
 type State struct {
 	Alerts      []adapters.Alert `json:"alerts"`
+	AlertCount  int              `json:"alertCount"`
+	Status      string           `json:"status"`
 	RefreshedAt time.Time        `json:"refreshedAt"`
 	Errors      []string         `json:"errors,omitempty"`
 }
@@ -30,6 +32,7 @@ func New(cfg cfgpkg.Config) *App {
 	return &App{
 		cfg:    cfg,
 		client: &http.Client{Timeout: cfg.HTTPTimeoutDuration()},
+		state:  State{Alerts: []adapters.Alert{}, Status: "healthy"},
 	}
 }
 
@@ -45,7 +48,7 @@ func (a *App) Start() {
 }
 
 func (a *App) refresh() {
-	st := State{}
+	st := State{Alerts: []adapters.Alert{}}
 	for _, source := range a.cfg.Sources {
 		if !source.IsEnabled() {
 			continue
@@ -80,10 +83,26 @@ func (a *App) refresh() {
 		}
 		return st.Alerts[i].Message < st.Alerts[j].Message
 	})
+	st.AlertCount = len(st.Alerts)
+	st.Status = overallStatus(st.Alerts)
 	st.RefreshedAt = time.Now()
 	a.mu.Lock()
 	a.state = st
 	a.mu.Unlock()
+}
+
+func overallStatus(alerts []adapters.Alert) string {
+	status := "healthy"
+	for _, alert := range alerts {
+		switch alert.Severity {
+		case "critical":
+			return "critical"
+		case "warning":
+			status = "warning"
+		}
+	}
+	// Informational alerts remain visible and counted without raising the status.
+	return status
 }
 
 func (a *App) snapshot() State {

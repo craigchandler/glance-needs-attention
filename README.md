@@ -138,7 +138,56 @@ curl --fail http://127.0.0.1:8795/status
 curl --fail --include http://127.0.0.1:8795/widget
 ```
 
-`/health` reports whether a refresh completed within five refresh intervals; HTTP 200 does not imply all sources are healthy. `/status` returns alerts, source errors and the last completed refresh time. `/widget` returns escaped HTML and Glance's widget headers. Polling is sequential, with a timeout per source; initial startup waits for the first refresh.
+`/health` reports whether a refresh completed within five refresh intervals; HTTP 200 does not imply all sources are healthy. `/status` returns alerts, their count and overall status, source errors and the last completed refresh time. `/widget` returns escaped HTML and Glance's widget headers. Polling is sequential, with a timeout per source; initial startup waits for the first refresh.
+
+## Status API
+
+`GET /status` returns HTTP 200 with `Content-Type: application/json` and the current aggregate state:
+
+| Field | Meaning |
+| --- | --- |
+| `alerts` | Array of current alert objects; always `[]` when clear, never `null`. Each object retains `source`, `severity` and `message`. |
+| `alertCount` | Integer number of active alert entries; always equals the length of `alerts`. |
+| `status` | One of `healthy`, `warning` or `critical`, derived from the current alerts. |
+| `refreshedAt` | Time the aggregate state was last refreshed, in the existing RFC 3339 format with fractional seconds and a timezone offset. |
+| `errors` | Existing optional array of source errors; omitted when there are none. |
+
+With no alerts, `status` is `healthy`. Any `critical` alert makes it `critical`; otherwise any `warning` alert makes it `warning`. Informational (`info`) alerts are included in `alerts` and `alertCount` but leave the overall status `healthy`. Individual alert severities and their critical → warning → info ordering are unchanged. The count is of alert objects, not any underlying counts mentioned in their messages.
+
+Healthy example:
+
+```json
+{
+  "alerts": [],
+  "alertCount": 0,
+  "status": "healthy",
+  "refreshedAt": "2026-10-06T11:12:35.300422598+10:30"
+}
+```
+
+Alerting example:
+
+```json
+{
+  "alerts": [
+    {
+      "source": "Backups",
+      "severity": "critical",
+      "message": "Archive backup failed"
+    },
+    {
+      "source": "Storage",
+      "severity": "warning",
+      "message": "Volume is 90% full"
+    }
+  ],
+  "alertCount": 2,
+  "status": "critical",
+  "refreshedAt": "2026-10-06T11:12:35.300422598+10:30"
+}
+```
+
+Source errors remain separate from alert severity: `status: "healthy"` does not guarantee that every source is reachable. `/health` continues to check refresh progress independently of alerts, and `/widget` retains its existing HTML and headers. The API changes are additive except for empty `alerts` changing from `null` to `[]`.
 
 ## Configuration
 
@@ -233,6 +282,29 @@ Add this widget to your Glance configuration (also in [glance/needs-attention.ym
 ```
 
 This assumes native Glance on the same host. If Glance runs in a container, its loopback address is separate; configure networking deliberately before changing the helper's bind address. Source strings are escaped even though the extension permits HTML.
+
+## Homepage integration
+
+For Homepage running on the same host/network namespace, the summary fields can be mapped directly:
+
+```yaml
+- Needs Attention:
+    description: Aggregated alerts
+    widget:
+      type: customapi
+      url: http://127.0.0.1:8795/status
+      refreshInterval: 10000
+      mappings:
+        - field: alertCount
+          label: Alerts
+        - field: status
+          label: Status
+        - field: refreshedAt
+          label: Checked
+          format: relativeDate
+```
+
+If Homepage runs in a container, use an endpoint reachable from that container. The detailed alerts remain available in the same response for other consumers.
 
 ## Upgrade
 
